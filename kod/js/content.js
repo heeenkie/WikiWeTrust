@@ -31,7 +31,7 @@ is_usefull = function(map) {
 
   let newMap = new Map();
   for (let key of map.keys()) {
-    if (((map.get(key)).toLowerCase()).indexOf("https://www.nature.com") == 0 ) {
+    if (((map.get(key)).toLowerCase()).indexOf("nature.com") != -1 ) {
       newMap.set(key, map.get(key));
     }
   }
