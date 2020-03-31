@@ -78,10 +78,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
                 if (xmlhttp.status == 200) {
                     let jsonData = JSON.parse( xmlhttp.responseText );
-                    let properties444 = jsonData.claims.P1240;
-                    sendResponse({result: properties444});
-                    for (var property444 of properties444) {
-                        if (property444.mainsnak.datavalue != undefined && property444.mainsnak.datavalue.type == "string") {
+                    let propertiesP1240 = jsonData.claims.P1240;
+
+                    let score = getRightScore(propertiesP1240);
+
+                    sendResponse({result: score});
+                    for (var propertyP1240 of propertiesP1240) {
+                        if (propertyP1240.mainsnak.datavalue != undefined && propertyP1240.mainsnak.datavalue.type == "string") {
 
                         }
                     }
@@ -100,6 +103,35 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         xmlhttp.send();
     }
 
+    function getRightScore(props) {
+        let scoreAndTimeMap = new Map();
+        for (var prop of props) {
+            if (prop.qualifiers != undefined) {
+                let str = prop.qualifiers.P585[0].datavalue.value.time;
+                str = str.substring(1);
+                let arr = str.split("");
+                arr[9] = "1";
+                str = arr.join('');
+                scoreAndTimeMap.set(prop.mainsnak.datavalue.value, new Date(str));
+            }else {
+                scoreAndTimeMap.set(prop.mainsnak.datavalue.value, new Date(0,0,0,0,0,0,0));
+            }
+        }
+
+
+        scoreAndTimeMap = new Map(
+            Array
+            .from(scoreAndTimeMap)
+            .sort((a, b) => {
+            // a[0], b[0] is the key of the map
+                return b[1] - a[1];
+            })
+        )
+
+        return scoreAndTimeMap.keys().next().value;
+    }
+
+    //Calling functions synchronously.
     if (request.cmd === 'get_rate_from_wiki') {
         getPageId(request.link, function(arg1) {
             getEntity(arg1, function(arg2) {
