@@ -15,9 +15,7 @@ chrome.tabs.onUpdated.addListener(function (tabId , info) {
   if (info.status === 'complete') {
     chrome.tabs.query({active: true, currentWindow: true}, function(tab){
       if (info.status != undefined){
-        chrome.tabs.sendMessage(tab[0].id, {action: "do_check_links"}, function(response){
-
-        });
+        chrome.tabs.sendMessage(tab[0].id, {action: "do_check_links"});
       }
     });
   }
@@ -82,7 +80,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
                     let score = getRightScore(propertiesP1240);
 
-                    sendResponse({result: score});
+                    sendResponse({result: score, id: request.id});
                     for (var propertyP1240 of propertiesP1240) {
                         if (propertyP1240.mainsnak.datavalue != undefined && propertyP1240.mainsnak.datavalue.type == "string") {
 
@@ -136,9 +134,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         getPageId(request.link, function(arg1) {
             getEntity(arg1, function(arg2) {
                 getScore(arg2);
+
             })
         })
+        return true;
     }
     // Returning true is required here!
-    return true;
+
 });

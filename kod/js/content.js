@@ -6,34 +6,46 @@
 *
 **/
 chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
-
+  document.cookie = 'max-age=7200000;secure;samesite=none'
     if (msg.action === "do_check_links") {
-      var links = document.getElementsByTagName("a");
-      let urlsMap = new Map();
-      for (let index = 0; index < links.length; index++) {
-        if (links[index].href != undefined && links[index].href != ""){
-          urlsMap.set(links[index].id, links[index].href);
+        var links = document.getElementsByTagName("a");
+        let urlsMap = new Map();
+        for (let index = 0; index < links.length; index++) {
+            //Check for not empty strings.
+            if (links[index].href != undefined && links[index].href != ""){
+                //Check if url contains nature.com.
+                if (links[index].href.toLowerCase().indexOf("nature.com") >= 0) {
+                    //Check that element has an id otherwise create one.
+                    if (links[index].id == undefined || links[index].id == "") {
+                        links[index].id = "modiefiedIdFromContentScript-" + index;
+                    }
+                    urlsMap.set(index, links[index]);
+                }
+            }
         }
-      }
 
-      var usefull_urls = is_usefull(urlsMap);
-      for (var key of usefull_urls.keys()) {
-        chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", link: (usefull_urls.get(key)).substring(12,18)}, function(response) {
-            alert(response.result);
+        for (var key of urlsMap.keys()) {
+          chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", id: urlsMap.get(key).id, link: "nature"}, function(response) {
+              let ele = document.getElementById(response.id);
+              ele.outerHTML += ("<span style='font-size: 14px; font-family: Arial, Helvetica, sans-serif; font-weight: normal; font-style: normal; color: green;'>(" + response.result + "/3) </span> ");
+//ele.innerHTML += (" (" + response.result + "/3)");
+              //ele.style.color = "green";
           });
-      }
-      return true;
+        }
+        return true;
     }
 
 });
 
+
+
 is_usefull = function(map) {
 
-  let newMap = new Map();
-  for (let key of map.keys()) {
-    if (((map.get(key)).toLowerCase()).indexOf("nature.com") != -1 ) {
-      newMap.set(key, map.get(key));
+    let newMap = new Map();
+    for (let key of map.keys()) {
+        if (((map.get(key)).toLowerCase()).indexOf("nature.com") != -1 ) {
+            newMap.set(key, map.get(key));
+        }
     }
-  }
-  return newMap;
+    return newMap;
 }
