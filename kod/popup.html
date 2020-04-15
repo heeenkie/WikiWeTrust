@@ -4,16 +4,19 @@
   <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="css/popup.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <title>More info</title>
   </head>
   <body>
-    <div class="title">
+    <div id="title">
       <p>Wiki We Trust</p>
     </div>
-    <div class="">
-      <input class="input" id="urlInput" type="text" placeholder="Enter url to scan...">
-      <button type="button" class="searchBtn" name="button">Search</button>
+    <div id="search_div">
+      <input id="search_input" type="text" placeholder="Search for a domain..." name="search">
+      <button type="submit" onclick="doSearch()"><i class="fa fa-search"></i></button>
     </div>
-    <script src="js/popup.js" charset="utf-8"></script>
+    <div id="result_div" visible="false">
+    </div>
+    <script src="js/popup.js" charset="utf-8" ></script>
   </body>
 </html>

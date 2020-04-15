@@ -30,10 +30,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         xmlhttp.onreadystatechange = function() {
             if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
                 if (xmlhttp.status == 200) {
-                    let jsonData = JSON.parse( xmlhttp.responseText );
-                    let pageid = jsonData.query.search[1].pageid;
-                    callback(pageid);
-
+                  try {
+                      let jsonData = JSON.parse( xmlhttp.responseText );
+                      let pageid = jsonData.query.search[0].pageid;
+                      callback(pageid);
+                  } catch (e) {
+                    console.log(e + ", getPageID");
+                  }
                 }
                 else if (xmlhttp.status == 400) {
                     alert('There was an error 400.');
@@ -53,9 +56,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         xmlhttp.onreadystatechange = function() {
             if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
                 if (xmlhttp.status == 200) {
-                    let jsonData = JSON.parse(xmlhttp.responseText);
-                    let entity = jsonData.query.pages[pageid].pageprops.wikibase_item;
-                    callback(entity);
+                  try {
+                      let jsonData = JSON.parse(xmlhttp.responseText);
+                      let entity = jsonData.query.pages[pageid].pageprops.wikibase_item;
+                      callback(entity);
+                  } catch (e) {
+                      console.log(e + ", getEntity");
+                  }
                 }
                 else if (xmlhttp.status == 400) {
                     alert('There was an error 400.');
@@ -77,17 +84,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 if (xmlhttp.status == 200) {
                     let jsonData = JSON.parse( xmlhttp.responseText );
                     let propertiesP1240 = jsonData.claims.P1240;
-
                     let score = getRightScore(propertiesP1240);
-
                     sendResponse({result: score, id: request.id});
-                    for (var propertyP1240 of propertiesP1240) {
-                        if (propertyP1240.mainsnak.datavalue != undefined && propertyP1240.mainsnak.datavalue.type == "string") {
-
-                        }
-                    }
-
-                    //callback(score);
                 }
                 else if (xmlhttp.status == 400) {
                     alert('There was an error 400.');
@@ -102,6 +100,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
 
     function getRightScore(props) {
+        if (props == undefined) {
+            return "-1";
+        }
         let scoreAndTimeMap = new Map();
         for (var prop of props) {
             if (prop.qualifiers != undefined) {
@@ -115,8 +116,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 scoreAndTimeMap.set(prop.mainsnak.datavalue.value, new Date(0,0,0,0,0,0,0));
             }
         }
-
-
         scoreAndTimeMap = new Map(
             Array
             .from(scoreAndTimeMap)
@@ -125,13 +124,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 return b[1] - a[1];
             })
         )
-
         return scoreAndTimeMap.keys().next().value;
     }
 
     //Calling functions synchronously.
     if (request.cmd === 'get_rate_from_wiki') {
-        getPageId(request.link, function(arg1) {
+        getPageId(request.href, function(arg1) {
             getEntity(arg1, function(arg2) {
                 getScore(arg2);
 

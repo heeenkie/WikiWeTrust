@@ -1,17 +1,53 @@
 
 body {
-    width: 250px;
-    height: 150px;
+    width: 500px;
+    height: 250px;
     text-align: center;
     padding: 0px;
     margin: 0px;
     border: 3px solid rgb(100, 100, 100);
     border-radius: 1px;
 }
+* {
+  box-sizing: border-box;
+}
 
-.title {
+#title {
   Padding-top: 15px;
   font-size: 16px;
   font-weight: bold;
   color: rgb(100, 100, 100);
+}
+
+#search_div {
+  margin-left: 5%;
+  margin-right: 5%;
+  width: 90%;
+}
+
+#search_div input[type=text] {
+  float: left;
+  padding: 11px;
+  font-size: 15px;
+  border: 1px solid Grey;
+  width: 80%;
+  background: #White;
+  color: Black;
+  border-right: none;
+}
+
+#search_div button {
+  float: left;
+  padding: 10px;
+  font-size: 17px;
+  border: 1px solid Grey;
+  width: 20%;
+  background: Blue;
+  color: white;
+  border-left: none;
+  cursor: pointer;
+}
+
+#search_div button:hover {
+  background: DarkBlue;
 }

@@ -8,12 +8,13 @@
 
 
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelector('.searchBtn').addEventListener('click', function(event) {
-    chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", link: document.getElementById('urlInput').value}, function(response) {
-        //alert(response.result);
-        document.getElementById('urlInput').value = response.result;
+  function doSearch(){
+    var input = document.getElementById("search_input").value;
+    chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", id: 1, link: input}, function(response) {
+
+        document.getElementById('result_div').innerHTML = "<p> Score: " + response.result + "</p>";
       }
 
     );
-  });
-}, false)
+  }
+}, false);
