@@ -25,21 +25,24 @@ chrome.tabs.onUpdated.addListener(function (tabId , info) {
 //Gets data from Wiki API and returns score
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     function getPageId(searchObj, callback) {
-        let url = 'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + searchObj;
+        let url = 'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + searchObj + ".&srsort=relevance";
         let xmlhttp = new XMLHttpRequest();
         xmlhttp.onreadystatechange = function() {
             if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
                 if (xmlhttp.status == 200) {
-                    let jsonData = JSON.parse( xmlhttp.responseText );
-                    let pageid = jsonData.query.search[1].pageid;
-                    callback(pageid);
-
+                    try {
+                        let jsonData = JSON.parse( xmlhttp.responseText );
+                        let pageid = jsonData.query.search[0].pageid;
+                        callback(pageid);
+                    } catch (e) {
+                      console.log(e + ", getPageID");
+                    }
                 }
                 else if (xmlhttp.status == 400) {
-                    alert('There was an error 400.');
+                    console.log('There was an error 400.');
                 }
                 else {
-                    alert('Error during connect with code: ' + xmlhttp.status);
+                    console.log('Error during connect with code: ' + xmlhttp.status);
                 }
             }
         };
@@ -53,15 +56,20 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         xmlhttp.onreadystatechange = function() {
             if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
                 if (xmlhttp.status == 200) {
-                    let jsonData = JSON.parse(xmlhttp.responseText);
-                    let entity = jsonData.query.pages[pageid].pageprops.wikibase_item;
-                    callback(entity);
+                    try {
+                        let jsonData = JSON.parse(xmlhttp.responseText);
+                        let entity = jsonData.query.pages[pageid].pageprops.wikibase_item;
+                        callback(entity);
+
+                    } catch (e) {
+                        console.log(e + ", getEntity");
+                    }
                 }
                 else if (xmlhttp.status == 400) {
-                    alert('There was an error 400.');
+                    console.log('There was an error 400.');
                 }
                 else {
-                    alert('Error during connect with code: ' + xmlhttp.status);
+                    console.log('Error during connect with code: ' + xmlhttp.status);
                 }
             }
         };
@@ -77,23 +85,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 if (xmlhttp.status == 200) {
                     let jsonData = JSON.parse( xmlhttp.responseText );
                     let propertiesP1240 = jsonData.claims.P1240;
-
                     let score = getRightScore(propertiesP1240);
-
-                    sendResponse({result: score, id: request.id});
-                    for (var propertyP1240 of propertiesP1240) {
-                        if (propertyP1240.mainsnak.datavalue != undefined && propertyP1240.mainsnak.datavalue.type == "string") {
-
-                        }
-                    }
-
-                    //callback(score);
+                    sendResponse({result: score});
                 }
                 else if (xmlhttp.status == 400) {
-                    alert('There was an error 400.');
+                    console.log('There was an error 400.');
                 }
                 else {
-                    alert('Error during connect with code: ' + xmlhttp.status);
+                    console.log('Error during connect with code: ' + xmlhttp.status);
                 }
             }
         };
@@ -102,6 +101,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
 
     function getRightScore(props) {
+        if (props == undefined) {
+            return "-1";
+        }
         let scoreAndTimeMap = new Map();
         for (var prop of props) {
             if (prop.qualifiers != undefined) {
@@ -115,7 +117,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 scoreAndTimeMap.set(prop.mainsnak.datavalue.value, new Date(0,0,0,0,0,0,0));
             }
         }
-
 
         scoreAndTimeMap = new Map(
             Array
@@ -131,14 +132,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     //Calling functions synchronously.
     if (request.cmd === 'get_rate_from_wiki') {
-        getPageId(request.link, function(arg1) {
+        let arg0 = request.href;
+        getPageId(arg0, function(arg1) {
             getEntity(arg1, function(arg2) {
                 getScore(arg2);
-
             })
         })
         return true;
     }
-    // Returning true is required here!
-
 });
