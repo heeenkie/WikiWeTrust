@@ -31,21 +31,31 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
             }
         }
 
+        //Time measurement
+        var start = new Date().getTime();
+        var job = new Promise((resolve, reject) => {
 
-        //Creating a list of unique searchable hrefs.
-        var unique_hrefs = Array.from(new Set(custom_items.map(x => x.href_searchable)));
+            //Creating a list of unique searchable hrefs.
+            var unique_hrefs = Array.from(new Set(custom_items.map(x => x.href_searchable)));
+                unique_hrefs.forEach((href, i, array) => {
+                //Sending request to api
+                chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", href: href}, function(response) {
+                    //Change every element that contains the searched href.
+                    for (let custom_item of custom_items) {
+                        if (custom_item.href_searchable == href) {
+                            changeGUI(custom_item.id, response.result);
 
-        for (let href of unique_hrefs) {
-            //Sending request to api
-            chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", href: href}, function(response) {
-                //Change every element that contains the searched href.
-                for (let custom_item of custom_items) {
-                    if (custom_item.href_searchable == href) {
-                        changeGUI(custom_item.id, response.result);
+                        }
                     }
-                }
+                    if (i === array.length -1) resolve();
+                });
             });
-        }
+        });
+
+        job.then(() => {
+            var end = new Date().getTime();
+            alert(end-start);
+        });
 
 
         return true;

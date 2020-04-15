@@ -60,7 +60,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                         let jsonData = JSON.parse(xmlhttp.responseText);
                         let entity = jsonData.query.pages[pageid].pageprops.wikibase_item;
                         callback(entity);
-
                     } catch (e) {
                         console.log(e + ", getEntity");
                     }
@@ -126,7 +125,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 return b[1] - a[1];
             })
         )
-
         return scoreAndTimeMap.keys().next().value;
     }
 
