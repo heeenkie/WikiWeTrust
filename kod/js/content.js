@@ -22,11 +22,11 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
                     page_items[i].id = "modiefiedIdFromContentScript-" + i;
                 }
                 //Trim href to be searchable.
-                page_items[i].href_searchable = trimURL(page_items[i].href);
+                page_items[i].href_modified = trimURL(page_items[i].href);
                 //Fill new object with nedded attributes and push it to array..
                 custom_item.id = page_items[i].id;
                 custom_item.href = page_items[i].href
-                custom_item.href_searchable = page_items[i].href_searchable;
+                custom_item.href_modified = page_items[i].href_modified;
                 custom_items.push(custom_item);
             }
         }
@@ -34,28 +34,49 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
         //Time measurement
         var start = new Date().getTime();
         var job = new Promise((resolve, reject) => {
-
-            //Creating a list of unique searchable hrefs.
-            var unique_hrefs = Array.from(new Set(custom_items.map(x => x.href_searchable)));
-                unique_hrefs.forEach((href, i, array) => {
-                //Sending request to api
-                chrome.runtime.sendMessage({cmd: "get_rate_from_wiki", href: href}, function(response) {
-                    //Change every element that contains the searched href.
-                    for (let custom_item of custom_items) {
-                        if (custom_item.href_searchable == href) {
-                            changeGUI(custom_item.id, response.result);
-
+            function do0(list, callback){
+                let new_list = new Array();
+                list.forEach((item, i, array1) => {
+                    //Sending request to api
+                    chrome.runtime.sendMessage({cmd: "get_score_first_try", href: item.href, id: item.id}, function(response) {
+                        if (response.score > 0) {
+                            changeGUI(response.id, response.score);
+                        } else {
+                            new_list.push(item);
                         }
-                    }
-                    if (i === array.length -1) resolve();
+                        if (i === array1.length -1) callback(new_list);
+                    });
                 });
-            });
-        });
+            }
+            function do1(list, callback){
+                var unique_hrefs = Array.from(new Set(list.map(x => x.href_modified)));
+                unique_hrefs.forEach((item_i, i, array2) => {
+                    chrome.runtime.sendMessage({cmd: "get_score_second_try", href: item_i}, function(response) {
+                        if (response.score > 0) {
+                            list.forEach((item_j, j, array3) => {
+                                if (item_j.href_modified == item_i) {
+                                    changeGUI(item_j.id, response.score);
+                                }
+                            });
+                        }
+                        if (i === array2.length -1) callback(list);
+                    });
+                });
+            }
+            do0(custom_items, function(arg1){
+                do1(arg1, function(arg2){
+                    console.log(arg2);
+                    resolve();
+                })
+            })
 
+        });
         job.then(() => {
             var end = new Date().getTime();
             alert(end-start);
         });
+
+
 
 
         return true;
@@ -123,5 +144,8 @@ trimURL = function(url) {
     }
 
     url = url.substring(posStart, posEnd);
+    if (url == "google.com") {
+        url = "";
+    }
     return url;
 }
