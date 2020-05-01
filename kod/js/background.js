@@ -26,124 +26,68 @@ chrome.tabs.onUpdated.addListener(function (tabId , info) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     function getEntityFirst(searchObj, callback) {
+        let url = ("https://www.wikidata.org/w/api.php?action=query&list=search&format=json&srsearch=" + searchObj);
 
-        class SPARQLQueryDispatcher {
-        	constructor( endpoint ) {
-        		this.endpoint = endpoint;
-        	}
-
-        	query( sparqlQuery ) {
-        		const fullUrl = this.endpoint + '?query=' + encodeURIComponent( sparqlQuery );
-        		const headers = { 'Accept': 'application/sparql-results+json' };
-
-        		return fetch( fullUrl, { headers } ).then( body => body.json() ).catch(err=>console.log(err));
-        	}
-        }
-
-        const endpointUrl = 'https://query.wikidata.org/sparql';
-        const sparqlQuery = `SELECT ?item ?score ?date WHERE {
-          ?item wdt:P31 wd:Q5633421;
-              wdt:P856 ?href.
-          SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
-          FILTER(CONTAINS(LCASE("`+ searchObj+`"), LCASE(STR(?href)) ))
-
-          ?item p:P1240 ?scoreItem.
-          ?scoreItem ps:P1240 ?score.
-          OPTIONAL { ?scoreItem pq:P585 ?date.}
-        }`;
-
-        const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
-        queryDispatcher.query( sparqlQuery ).then( callback );
-
-    }
-
-    function getEntitySecond(searchObj, callback) {
-        class SPARQLQueryDispatcher {
-          constructor( endpoint ) {
-            this.endpoint = endpoint;
-          }
-
-          query( sparqlQuery ) {
-            const fullUrl = this.endpoint + '?query=' + encodeURIComponent( sparqlQuery );
-            const headers = { 'Accept': 'application/sparql-results+json' };
-
-            return fetch( fullUrl, { headers } ).then( body => body.json() ).catch(err=>console.log(err));
-          }
-        }
-
-        const endpointUrl = 'https://query.wikidata.org/sparql';
-        const sparqlQuery = `SELECT ?item ?score ?date WHERE {
-          ?item wdt:P31 wd:Q5633421;
-              wdt:P856 ?href.
-          SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
-          FILTER(CONTAINS(LCASE(STR(?href)), LCASE("`+ searchObj+`") ))
-
-          ?item p:P1240 ?scoreItem.
-          ?scoreItem ps:P1240 ?score.
-          OPTIONAL { ?scoreItem pq:P585 ?date.}
-        }`;
-
-        const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
-        queryDispatcher.query( sparqlQuery ).then( callback );
-
-    }
-
-    function getMostRecentScore(input, isFirst, callback) {
-        let results = input.results.bindings;
-        let new_result = new Array();
-
-        if (results.length == 1) {
-            callback(results[0].score.value);
-            return;
-        }
-
-        let unique_arr = Array.from(new Set(results.map(x => x.item.value)));
-        let unique_val = unique_arr[0];
-        results.forEach((item, i) => {
-            if (item.item.value == unique_val) {
-                new_result.push(item)
-            }
+        fetch(url).then((response) => {
+            return response.json();
+        }).then((data) => {
+            callback(data);
+        }).catch((e) => {
+            console.log("getEntity: " + e);
         });
+    }
 
-        new_result.sort(function(a, b){
+    function getScore(entityObj, callback) {
+        let entity = entityObj.query.search[0].title;
+        let url = ("https://www.wikidata.org/w/api.php?action=wbgetclaims&format=json&entity=" + entity);
 
-            var dateA = a.date != undefined? new Date(a.date.value): new Date(null), dateB = b.date != undefined? new Date(b.date.value): new Date(null);
-            return dateB-dateA
-        })
+        fetch(url).then((response) => {
+            return response.json();
+        }).then((data) => {
+            callback(data.claims.P1240);
+        }).catch((e) => {
+            console.log("getScore: " + e);
+        });
+    }
 
-        try {
-            callback(new_result[0].score.value);
-        } catch (e) {
-          console.log("getMostRecentScore: " + e);
+
+    function getMostRecentScore(scores, callback) {
+        if (scores == undefined) {
             callback(-1);
+        } else if (scores.length == 1) {
+            callback(scores[0].mainsnak.datavalue.value);
+        } else if (scores.length > 1) {
+            scores.sort(function(a, b){
+                var dateA = a.qualifiers == undefined? new Date(null): new Date((a.qualifiers.P585[0].datavalue.value.time).substring(1,10) + '1' + (a.qualifiers.P585[0].datavalue.value.time).substring(11));
+                var dateB = b.qualifiers == undefined? new Date(null): new Date((b.qualifiers.P585[0].datavalue.value.time).substring(1,10) + '1' + (b.qualifiers.P585[0].datavalue.value.time).substring(11));
+                return dateB-dateA
+            })
+            callback(scores[0].mainsnak.datavalue.value);
         }
     }
 
     //Calling functions synchronously.
-    if (request.cmd === 'get_score_first_try') {
-        let arg0 = request.href;
-        getEntityFirst(arg0, function(arg1) {
-            if ( arg1 != undefined && arg1 != null && arg1.results.bindings.length > 0) {
-                getMostRecentScore(arg1, true, function(arg2) {
-                    sendResponse({score: arg2, id: request.id});
-                });
-            } else {
-                sendResponse({score: -2, id: request.id});
-            }
-        });
-        return true;
+    if (request.cmd === 'get_score') {
+        try {
+            let arg0 = request.href;
+            getEntityFirst(arg0, function(arg1) {
+                if ( arg1 == undefined || arg1 == null || arg1.query.searchinfo.totalhits < 1 ) {
+                    throw new Error('Could not find entity');
+                } else {
+                    getScore(arg1, function(arg2) {
+                        getMostRecentScore((arg2), function(arg3) {
+                            sendResponse({score: arg3});
+                        });
+
+                    });
+                }
+            });
+        } catch (e) {
+            console.log("getScore: " + e);
+            sendResponse({score: -1});
+        } finally {
+            return true;
+        }
     }
-    if (request.cmd === 'get_score_second_try') {
-        let arg0 = request.href;
-        getEntitySecond(arg0, function(arg1) {
-            if ( arg1 != undefined && arg1 != null && arg1.results.bindings.length > 0) {
-                getMostRecentScore(arg1, false, function(arg2) {
-                    sendResponse({score: arg2});
-                });
-            } else {
-                sendResponse({score: -2});
-            }
-        });
-        return true;
-    }
+
 });

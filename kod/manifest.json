@@ -1,7 +1,7 @@
 {
 	"name": "Wiki We Trust",
 	"description": "Just trust wiki and you will see",
-	"version": "3.0",
+	"version": "4.0",
 	"manifest_version": 2,
 
 	"browser_action": {

@@ -23,6 +23,8 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
                 }
                 //Trim href to be searchable.
                 page_items[i].href_modified = trimURL(page_items[i].href);
+                //if (page_items[i].href_modified == "google.com") continue;
+
                 //Fill new object with nedded attributes and push it to array..
                 custom_item.id = page_items[i].id;
                 custom_item.href = page_items[i].href
@@ -34,41 +36,26 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
         //Time measurement
         var start = new Date().getTime();
         var job = new Promise((resolve, reject) => {
-            function do0(list, callback){
-                let new_list = new Array();
-                list.forEach((item, i, array1) => {
-                    //Sending request to api
-                    chrome.runtime.sendMessage({cmd: "get_score_first_try", href: item.href, id: item.id}, function(response) {
+
+
+            function search(list, callback){
+                let unique_hrefs = Array.from(new Set(list.map(x => x.href_modified)));
+                unique_hrefs.forEach((item_out, i) => {
+                    chrome.runtime.sendMessage({cmd: "get_score", href: item_out}, function(response) {
                         if (response.score > 0) {
-                            changeGUI(response.id, response.score);
-                        } else {
-                            new_list.push(item);
-                        }
-                        if (i === array1.length -1) callback(new_list);
-                    });
-                });
-            }
-            function do1(list, callback){
-                var unique_hrefs = Array.from(new Set(list.map(x => x.href_modified)));
-                unique_hrefs.forEach((item_i, i, array2) => {
-                    chrome.runtime.sendMessage({cmd: "get_score_second_try", href: item_i}, function(response) {
-                        if (response.score > 0) {
-                            list.forEach((item_j, j, array3) => {
-                                if (item_j.href_modified == item_i) {
-                                    changeGUI(item_j.id, response.score);
+                            list.forEach((item_in, j) => {
+                                if (item_out == item_in.href_modified) {
+                                    changeGUI(item_in.id, response.score);
                                 }
                             });
                         }
-                        if (i === array2.length -1) callback(list);
+                        if (i === unique_hrefs.length -1) resolve();
                     });
                 });
             }
-            do0(custom_items, function(arg1){
-                do1(arg1, function(arg2){
-                    console.log(arg2);
-                    resolve();
-                })
-            })
+
+
+            search(custom_items);
 
         });
         job.then(() => {
@@ -144,8 +131,5 @@ trimURL = function(url) {
     }
 
     url = url.substring(posStart, posEnd);
-    if (url == "google.com") {
-        url = "";
-    }
     return url;
 }
