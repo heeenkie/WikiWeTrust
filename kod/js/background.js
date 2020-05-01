@@ -14,7 +14,7 @@ function onError(error) {
 chrome.tabs.onUpdated.addListener(function (tabId , info) {
   if (info.status === 'complete') {
     chrome.tabs.query({active: true, currentWindow: true}, function(tab){
-      if (info.status != undefined){
+      if (info.status != undefined && tab != undefined){
         chrome.tabs.sendMessage(tab[0].id, {action: "do_check_links"});
       }
     });
